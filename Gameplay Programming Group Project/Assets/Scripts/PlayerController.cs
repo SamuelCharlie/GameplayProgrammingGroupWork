@@ -7,13 +7,19 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     PlayerControls player_controls;
-    Vector2 move_vector;
-
     public CharacterController controller;
 
-    public float player_speed;
+    Vector2 move_vector;
+    Vector2 rotation_vector;
+    float is_sprinting;
+    float is_jumping;
+    public float walk_speed;
+    public float sprint_speed;
     private Vector3 player_velocity;
-    private static Vector3 player_movement;
+    private Vector3 player_movement;
+
+    public Camera player_cam;
+    Vector3 cam_rotation;
 
     [SerializeField] private static bool is_grounded;
     [SerializeField] private float ground_distance_check;
@@ -26,6 +32,14 @@ public class PlayerController : MonoBehaviour
 
         player_controls.Player.Move.performed += ctx => move_vector = ctx.ReadValue<Vector2>();
         player_controls.Player.Move.canceled += ctx => move_vector = Vector2.zero;
+
+        player_controls.Player.Look.performed += ctx => rotation_vector = ctx.ReadValue<Vector2>();
+        player_controls.Player.Look.canceled += ctx => rotation_vector = Vector2.zero;
+
+        player_controls.Player.Sprint.performed += ctx => is_sprinting = sprint_speed;
+        player_controls.Player.Sprint.canceled += ctx => is_sprinting = walk_speed;
+
+        player_controls.Player.Jump.performed += ctx => Jump();
     }
 
     private void OnEnable()
@@ -38,9 +52,19 @@ public class PlayerController : MonoBehaviour
         player_controls.Player.Disable();
     }
 
+    private void Start()
+    {
+        is_sprinting = walk_speed;
+        cam_rotation = new Vector3(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+        is_jumping = -1.0f;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
     private void FixedUpdate()
     {
+        CameraRotation();
         Move();
+        Jumping();
     }
 
     private void Move()
@@ -62,7 +86,7 @@ public class PlayerController : MonoBehaviour
             {
                 //player is on the ground
 
-                Vector3 movement = new Vector3(move_vector.x, 0.0f, move_vector.y) * player_speed *
+                Vector3 movement = new Vector3(move_vector.x, 0.0f, move_vector.y) * walk_speed *
                 Time.deltaTime;
                 player_movement = movement;
                 player_movement = transform.TransformDirection(movement);
@@ -70,9 +94,37 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        controller.Move(player_movement * player_speed * Time.deltaTime);
+        controller.Move(player_movement * walk_speed * Time.deltaTime);
 
         player_velocity.y += gravity * Time.deltaTime;
         controller.Move(player_velocity * Time.deltaTime);
+    }
+
+    void CameraRotation()
+    {
+        cam_rotation = new Vector3(cam_rotation.x + rotation_vector.y * 10, cam_rotation.y + rotation_vector.x * 10, cam_rotation.z);
+
+        player_cam.transform.eulerAngles = cam_rotation;
+        transform.eulerAngles = new Vector3(transform.rotation.x, cam_rotation.y, transform.rotation.z);
+    }
+
+    private void Jumping()
+    {
+        if (is_jumping + 0.5f > Time.time)
+        {
+            transform.Translate((Vector3.up * 10.0f * Time.deltaTime), Space.Self);
+        }
+        else if (is_jumping + 1.0f > Time.time)
+        {
+            transform.Translate((Vector3.up * -10.0f * Time.deltaTime), Space.Self);
+        }
+    }
+
+    private void Jump()
+    {
+        if (is_jumping + 1.0f < Time.time)
+        {
+            is_jumping = Time.time;
+        }
     }
 }
