@@ -7,7 +7,8 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     PlayerControls player_controls;
-    public CharacterController controller;
+    private CharacterController character_controller;
+    private AnimatorController animator_controller;
 
     Vector2 move_vector;
     Vector2 rotation_vector;
@@ -40,6 +41,9 @@ public class PlayerController : MonoBehaviour
         player_controls.Player.Sprint.canceled += ctx => is_sprinting = walk_speed;
 
         player_controls.Player.Jump.performed += ctx => Jump();
+
+        character_controller = GetComponent<CharacterController>();
+        animator_controller = GetComponent<AnimatorController>();
     }
 
     private void OnEnable()
@@ -76,6 +80,8 @@ public class PlayerController : MonoBehaviour
             player_velocity.y = -2.0f;
         }
 
+        Vector3 movement = Vector3.zero;
+        
         if (is_grounded)
         {
             if (player_velocity.x == 0 && player_velocity.y == 0)
@@ -86,7 +92,7 @@ public class PlayerController : MonoBehaviour
             {
                 //player is on the ground
 
-                Vector3 movement = new Vector3(move_vector.x, 0.0f, move_vector.y) * walk_speed *
+                movement = new Vector3(move_vector.x, 0.0f, move_vector.y) * walk_speed *
                 Time.deltaTime;
                 player_movement = movement;
                 player_movement = transform.TransformDirection(movement);
@@ -94,10 +100,12 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        controller.Move(player_movement * walk_speed * Time.deltaTime);
+        character_controller.Move(player_movement * walk_speed * Time.deltaTime);
+        animator_controller.UpdateAnimatorValues(movement.x, movement.y,
+            false, is_grounded);
 
         player_velocity.y += gravity * Time.deltaTime;
-        controller.Move(player_velocity * Time.deltaTime);
+        character_controller.Move(player_velocity * Time.deltaTime);
     }
 
     void CameraRotation()
