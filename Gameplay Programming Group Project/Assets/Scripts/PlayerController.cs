@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour
 
     Vector2 move_vector;
     Vector2 rotation_vector;
-    float is_sprinting;
+    public float is_sprinting;
     float is_jumping;
     public float walk_speed;
     public float sprint_speed;
@@ -69,6 +69,9 @@ public class PlayerController : MonoBehaviour
         CameraRotation();
         Move();
         Jumping();
+        
+        animator_controller.UpdateAnimatorValues(move_vector.x, move_vector.y,
+            is_sprinting > walk_speed, is_grounded);
     }
 
     private void Move()
@@ -80,8 +83,6 @@ public class PlayerController : MonoBehaviour
             player_velocity.y = -2.0f;
         }
 
-        Vector3 movement = Vector3.zero;
-        
         if (is_grounded)
         {
             if (player_velocity.x == 0 && player_velocity.y == 0)
@@ -92,8 +93,8 @@ public class PlayerController : MonoBehaviour
             {
                 //player is on the ground
 
-                movement = new Vector3(move_vector.x, 0.0f, move_vector.y) * walk_speed *
-                Time.deltaTime;
+                Vector3 movement = new Vector3(move_vector.x, 0.0f, move_vector.y) * walk_speed *
+                                  Time.deltaTime;
                 player_movement = movement;
                 player_movement = transform.TransformDirection(movement);
                 transform.Translate(movement, Space.World);
@@ -101,8 +102,6 @@ public class PlayerController : MonoBehaviour
         }
 
         character_controller.Move(player_movement * walk_speed * Time.deltaTime);
-        animator_controller.UpdateAnimatorValues(movement.x, movement.y,
-            false, is_grounded);
 
         player_velocity.y += gravity * Time.deltaTime;
         character_controller.Move(player_velocity * Time.deltaTime);
@@ -133,6 +132,7 @@ public class PlayerController : MonoBehaviour
         if (is_jumping + 1.0f < Time.time)
         {
             is_jumping = Time.time;
+            animator_controller.PlayTargetAnimation("Jump", true);
         }
     }
 }
