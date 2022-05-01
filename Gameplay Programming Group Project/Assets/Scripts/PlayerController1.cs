@@ -1,23 +1,58 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.XR;
 
 public class PlayerController1 : MonoBehaviour
 {
-    PlayerControls player_controls;
+    private PlayerControls player_controls;
+    private CharacterController character_controller;
+    private AnimatorController animator_controller;
+    private Animator animator;
+    private int walking_anim_hash;
+    private int running_anim_hash;
 
-    Vector2 move_vector;
-    Vector2 rotation_vector;
-    float is_sprinting;
-    float is_jumping;
-    public float walk_speed;
-    public float sprint_speed;
+    private Vector2 move_input;
+    private Vector3 current_movement;
+    private bool is_movement_pressed;
 
-    public Camera player_cam;
-    Vector3 cam_rotation;
+    private bool is_sprinting;
 
+    public float rotation_speed;
+    
+    
+    private void Awake()
+    {
+        player_controls = new PlayerControls();
+
+        player_controls.Player.Move.performed += ctx => HandleInput(ctx);
+        player_controls.Player.Move.started += ctx => HandleInput(ctx);
+        player_controls.Player.Move.canceled += ctx => HandleInput(ctx);
+            
+        /*
+        player_controls.Player.Look.performed += ctx => rotation_vector = ctx.ReadValue<Vector2>();
+        player_controls.Player.Look.canceled += ctx => rotation_vector = Vector2.zero;
+        */
+        
+        player_controls.Player.Sprint.performed += ctx => is_sprinting = ctx.ReadValueAsButton();
+        player_controls.Player.Sprint.canceled += ctx => is_sprinting = ctx.ReadValueAsButton();
+        
+        /*
+        player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
+        player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
+        */
+
+        character_controller = GetComponent<CharacterController>();
+        animator_controller = GetComponent<AnimatorController>();
+        animator = GetComponent<Animator>();
+
+        walking_anim_hash = Animator.StringToHash("isWalking");
+        running_anim_hash = Animator.StringToHash("isRunning");
+    }
+    
     private void OnEnable()
     {
         player_controls.Player.Enable();
@@ -28,70 +63,48 @@ public class PlayerController1 : MonoBehaviour
         player_controls.Player.Disable();
     }
 
-    private void Awake()
-    {
-        player_controls = new PlayerControls();
-
-        player_controls.Player.Move.performed += ctx => move_vector = ctx.ReadValue<Vector2>();
-        player_controls.Player.Move.canceled += ctx => move_vector = Vector2.zero;
-
-        player_controls.Player.Look.performed += ctx => rotation_vector = ctx.ReadValue<Vector2>();
-        player_controls.Player.Look.canceled += ctx => rotation_vector = Vector2.zero;
-
-        player_controls.Player.Sprint.performed += ctx => is_sprinting = sprint_speed;
-        player_controls.Player.Sprint.canceled += ctx => is_sprinting = walk_speed;
-
-        player_controls.Player.Jump.performed += ctx => Jump();
-    }
-
-    
-
-    private void Start()
-    {
-        is_sprinting = walk_speed;
-        cam_rotation = new Vector3(transform.rotation.x, transform.rotation.y, transform.rotation.z);
-        is_jumping = -1.0f;
-        Cursor.lockState = CursorLockMode.Locked;
-    }
-
     private void Update()
     {
-        CameraRotation();
-        Move();
-        Jumping();
+        //HandleRotation();
+        HandleAnimation();
+        character_controller.Move(current_movement * Time.deltaTime);
     }
 
-    void CameraRotation()
+    private void HandleInput(InputAction.CallbackContext ctx)
     {
-        cam_rotation = new Vector3(cam_rotation.x + rotation_vector.y, cam_rotation.y + rotation_vector.x, cam_rotation.z);
-
-        player_cam.transform.eulerAngles = cam_rotation;
-        transform.eulerAngles = new Vector3(transform.rotation.x, cam_rotation.y, transform.rotation.z);
+        move_input = ctx.ReadValue<Vector2>();
+        current_movement.x = move_input.x;
+        current_movement.z = move_input.y;
+        is_movement_pressed = move_input.x != 0 || move_input.y != 0;
     }
 
-    private void Move()
+    private void HandleAnimation()
     {
-        transform.Translate(Vector3.right * Time.deltaTime * move_vector.x * is_sprinting, Space.Self);
-        transform.Translate(Vector3.forward * Time.deltaTime * move_vector.y * is_sprinting, Space.Self);
-    }
-    
-    private void Jumping()
-    {
-        if (is_jumping + 0.5f > Time.time)
+        /*
+        bool is_walking = animator.GetBool(walking_anim_hash);
+        bool is_running = animator.GetBool(running_anim_hash);
+        
+        if (is_movement_pressed)
         {
-            transform.Translate((Vector3.up * 8.0f * Time.deltaTime), Space.Self);
+            animator.SetBool(walking_anim_hash, !is_walking);
         }
-        else if (is_jumping + 1.0f > Time.time)
-        {
-            transform.Translate((Vector3.up * -8.0f * Time.deltaTime), Space.Self);
-        }
+        */
+
+        animator_controller.UpdateAnimatorValues(move_input.x, move_input.y, is_sprinting, true);
     }
-    
-    private void Jump()
+
+    void HandleRotation()
     {
-        if (is_jumping + 1.0f < Time.time)
+        Vector3 target_position;
+        target_position.x = current_movement.x;
+        target_position.y = 0;
+        target_position.z = current_movement.z;
+        
+        Quaternion current_rotation = transform.rotation;
+        if (is_movement_pressed)
         {
-            is_jumping = Time.time;
+            Quaternion target_rotation = Quaternion.LookRotation(target_position);
+            transform.rotation = Quaternion.Slerp(current_rotation, target_rotation, rotation_speed * Time.deltaTime);
         }
     }
 }

@@ -25,7 +25,8 @@ public class AnimatorController : MonoBehaviour
     {
         if (isSprinting)
         {
-            verticalMovement = 2;
+            horizontalMovement *= 2;
+            verticalMovement *= 2;
         }
         
         animator.SetFloat(horizontal, horizontalMovement, 0.1f, Time.deltaTime);

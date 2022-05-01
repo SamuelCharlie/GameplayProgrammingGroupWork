@@ -12,12 +12,17 @@ public class PlayerController : MonoBehaviour
 
     Vector2 move_vector;
     Vector2 rotation_vector;
-    public float is_sprinting;
-    float is_jumping;
+    public bool is_sprinting;
     public float walk_speed;
     public float sprint_speed;
     private Vector3 player_velocity;
     private Vector3 player_movement;
+
+    private bool is_jump_pressed;
+    bool is_jumping;
+    public float initial_jump_velocity;
+    public float max_jump_height;
+    public float max_jump_duration;
 
     public Camera player_cam;
     Vector3 cam_rotation;
@@ -26,6 +31,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float ground_distance_check;
     [SerializeField] private LayerMask ground_mask;
     [SerializeField] private float gravity;
+    [SerializeField] private float ground_gravity;
 
     private void Awake()
     {
@@ -37,10 +43,11 @@ public class PlayerController : MonoBehaviour
         player_controls.Player.Look.performed += ctx => rotation_vector = ctx.ReadValue<Vector2>();
         player_controls.Player.Look.canceled += ctx => rotation_vector = Vector2.zero;
 
-        player_controls.Player.Sprint.performed += ctx => is_sprinting = sprint_speed;
-        player_controls.Player.Sprint.canceled += ctx => is_sprinting = walk_speed;
+        player_controls.Player.Sprint.performed += ctx => is_sprinting = ctx.ReadValueAsButton();
+        player_controls.Player.Sprint.canceled += ctx => is_sprinting = ctx.ReadValueAsButton();
 
-        player_controls.Player.Jump.performed += ctx => Jump();
+        player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
+        player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
 
         character_controller = GetComponent<CharacterController>();
         animator_controller = GetComponent<AnimatorController>();
@@ -58,9 +65,16 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
-        is_sprinting = walk_speed;
+        is_sprinting = false;
         cam_rotation = new Vector3(transform.rotation.x, transform.rotation.y, transform.rotation.z);
-        is_jumping = -1.0f;
+        
+        is_jumping = false;
+        is_jump_pressed = false;
+        
+        float timeToApex = max_jump_duration / 2;
+        gravity = (-2 * max_jump_height) / Mathf.Pow(timeToApex, 2);
+        initial_jump_velocity = (2 * max_jump_height) / timeToApex;
+        
         Cursor.lockState = CursorLockMode.Locked;
     }
 
@@ -68,43 +82,44 @@ public class PlayerController : MonoBehaviour
     {
         CameraRotation();
         Move();
-        Jumping();
-        
+
         animator_controller.UpdateAnimatorValues(move_vector.x, move_vector.y,
-            is_sprinting > walk_speed, is_grounded);
+            is_sprinting, is_grounded);
+
+        Gravity();
+        Jump();
     }
 
     private void Move()
     {
         is_grounded = Physics.CheckSphere(transform.position, ground_distance_check, ground_mask);
 
-        if (is_grounded && player_velocity.y < 0)
-        {
-            player_velocity.y = -2.0f;
-        }
-
         if (is_grounded)
         {
-            if (player_velocity.x == 0 && player_velocity.y == 0)
-            {
-                //player is idle
-            }
-            else if (player_velocity.x != 0 || player_velocity.y != 0)
-            {
-                //player is on the ground
+            Vector3 current_movement = new Vector3(move_vector.x, 0.0f, move_vector.y);
+            current_movement *= is_sprinting ? sprint_speed : walk_speed;
+            
+            player_movement = transform.TransformDirection(current_movement);
+            transform.Translate(current_movement, Space.World);
+        }
+        
+        character_controller.Move(player_movement * Time.deltaTime);
+        character_controller.Move(player_velocity);
+    }
 
-                Vector3 movement = new Vector3(move_vector.x, 0.0f, move_vector.y) * walk_speed *
-                                  Time.deltaTime;
-                player_movement = movement;
-                player_movement = transform.TransformDirection(movement);
-                transform.Translate(movement, Space.World);
-            }
+    private void Gravity()
+    {
+        if (is_grounded)
+        {
+            player_velocity.y = ground_gravity;
         }
 
-        character_controller.Move(player_movement * walk_speed * Time.deltaTime);
-
-        player_velocity.y += gravity * Time.deltaTime;
-        character_controller.Move(player_velocity * Time.deltaTime);
+        else
+        {
+            float previous_y_velocity = player_velocity.y;
+            float new_y_velocity = player_velocity.y + (gravity * Time.deltaTime);
+            player_velocity.y = (previous_y_velocity + new_y_velocity) * 0.5f;
+        }
     }
 
     void CameraRotation()
@@ -115,24 +130,18 @@ public class PlayerController : MonoBehaviour
         transform.eulerAngles = new Vector3(transform.rotation.x, cam_rotation.y, transform.rotation.z);
     }
 
-    private void Jumping()
-    {
-        if (is_jumping + 0.5f > Time.time)
-        {
-            transform.Translate((Vector3.up * 10.0f * Time.deltaTime), Space.Self);
-        }
-        else if (is_jumping + 1.0f > Time.time)
-        {
-            transform.Translate((Vector3.up * -10.0f * Time.deltaTime), Space.Self);
-        }
-    }
-
     private void Jump()
     {
-        if (is_jumping + 1.0f < Time.time)
+        if (!is_jumping && is_grounded && is_jump_pressed)
         {
-            is_jumping = Time.time;
+            is_jumping = true;
+            player_velocity.y = initial_jump_velocity * 0.5f;
             animator_controller.PlayTargetAnimation("Jump", true);
+        }
+
+        else if (!is_jump_pressed && is_jumping && is_grounded)
+        {
+            is_jumping = false;
         }
     }
 }
