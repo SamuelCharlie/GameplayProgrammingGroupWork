@@ -14,16 +14,36 @@ public class PlayerController1 : MonoBehaviour
     private Animator animator;
     private int walking_anim_hash;
     private int running_anim_hash;
+    private int jumping_anim_hash;
+    private int jump_count_hash;
 
+    [Header("Movement")]
     private Vector2 move_input;
     private Vector3 current_movement;
     private bool is_movement_pressed;
-
     private bool is_sprinting;
-
+    
     public float rotation_speed;
     
-    
+    [Header("Jumping")]
+    private bool is_jump_pressed;
+    private bool is_jumping;
+    private bool in_jump_animation;
+    public bool can_double_jump;
+    private float gravity;
+    private int jump_combo_step;
+    public int jumps_remaining;
+    private Dictionary<int, float> initial_jump_velocities = new Dictionary<int, float>();
+    private Dictionary<int, float> initial_jump_gravities = new Dictionary<int, float>();
+    private Coroutine active_jump_reset_routine = null;
+
+    public float grounded_gravity;
+    public float initial_jump_velocity;
+    public float max_jump_height;
+    public float max_jump_duration;
+    public float jump_combo_window;
+    public float air_movement_modifier;
+
     private void Awake()
     {
         player_controls = new PlayerControls();
@@ -40,10 +60,8 @@ public class PlayerController1 : MonoBehaviour
         player_controls.Player.Sprint.performed += ctx => is_sprinting = ctx.ReadValueAsButton();
         player_controls.Player.Sprint.canceled += ctx => is_sprinting = ctx.ReadValueAsButton();
         
-        /*
         player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
-        player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
-        */
+        player_controls.Player.Jump.canceled += ctx => is_jump_pressed = ctx.ReadValueAsButton();
 
         character_controller = GetComponent<CharacterController>();
         animator_controller = GetComponent<AnimatorController>();
@@ -51,6 +69,30 @@ public class PlayerController1 : MonoBehaviour
 
         walking_anim_hash = Animator.StringToHash("isWalking");
         running_anim_hash = Animator.StringToHash("isRunning");
+        jumping_anim_hash = Animator.StringToHash("isJumping");
+        jump_count_hash = Animator.StringToHash("jumpCount");
+        
+        InitGameplayValues();
+    }
+
+    private void InitGameplayValues()
+    {
+        float timeToApex = max_jump_duration / 2;
+        gravity = (-2 * max_jump_height) / Mathf.Pow(timeToApex, 2);
+        initial_jump_velocity = (2 * max_jump_height) / timeToApex;
+        float second_jump_gravity = (-2 * (max_jump_height * 1.5f)) / Mathf.Pow((timeToApex * 1.25f), 2);
+        float second_jump_initial_velocity = (2 * (max_jump_height * 1.5f)) / (timeToApex * 1.25f);
+        float third_jump_gravity = (-2 * (max_jump_height * 2)) / Mathf.Pow((timeToApex * 1.5f), 2);
+        float third_jump_initial_velocity = (2 * (max_jump_height * 2)) / (timeToApex * 1.5f);
+        
+        initial_jump_velocities.Add(1, initial_jump_velocity);
+        initial_jump_velocities.Add(2, second_jump_initial_velocity);
+        initial_jump_velocities.Add(3, third_jump_initial_velocity);
+
+        initial_jump_gravities.Add(0, gravity);
+        initial_jump_gravities.Add(1, gravity);
+        initial_jump_gravities.Add(2, second_jump_gravity);
+        initial_jump_gravities.Add(3, third_jump_gravity);
     }
     
     private void OnEnable()
@@ -68,6 +110,8 @@ public class PlayerController1 : MonoBehaviour
         //HandleRotation();
         HandleAnimation();
         character_controller.Move(current_movement * Time.deltaTime);
+        HandleGravity();
+        HandleJumping();
     }
 
     private void HandleInput(InputAction.CallbackContext ctx)
@@ -76,21 +120,18 @@ public class PlayerController1 : MonoBehaviour
         current_movement.x = move_input.x;
         current_movement.z = move_input.y;
         is_movement_pressed = move_input.x != 0 || move_input.y != 0;
+
+        if (!character_controller.isGrounded)
+        {
+            current_movement.x *= is_sprinting ? air_movement_modifier * 1.5f : air_movement_modifier;
+            current_movement.z *= is_sprinting ? air_movement_modifier * 1.5f : air_movement_modifier;
+        }
     }
 
     private void HandleAnimation()
     {
-        /*
-        bool is_walking = animator.GetBool(walking_anim_hash);
-        bool is_running = animator.GetBool(running_anim_hash);
-        
-        if (is_movement_pressed)
-        {
-            animator.SetBool(walking_anim_hash, !is_walking);
-        }
-        */
-
-        animator_controller.UpdateAnimatorValues(move_input.x, move_input.y, is_sprinting, true);
+        animator_controller.UpdateAnimatorValues(move_input.x, move_input.y,
+            is_sprinting, character_controller.isGrounded);
     }
 
     void HandleRotation()
@@ -106,5 +147,76 @@ public class PlayerController1 : MonoBehaviour
             Quaternion target_rotation = Quaternion.LookRotation(target_position);
             transform.rotation = Quaternion.Slerp(current_rotation, target_rotation, rotation_speed * Time.deltaTime);
         }
+    }
+
+    void HandleGravity()
+    {
+        bool is_falling = current_movement.y <= 0.0f || !is_jump_pressed;
+        float fall_multiplier = 2.0f;
+        
+        if (character_controller.isGrounded)
+        {
+            current_movement.y = grounded_gravity;
+            jumps_remaining = can_double_jump ? 2 : 1;
+
+            if (in_jump_animation)
+            {
+                animator.SetBool(jumping_anim_hash, false);
+                in_jump_animation = false;
+                active_jump_reset_routine = StartCoroutine(ResetJumpCombo());
+
+                if (jump_combo_step == 3)
+                {
+                    jump_combo_step = 0;
+                    animator.SetInteger(jump_count_hash, jump_combo_step);
+                }
+            }
+        }
+        
+        else if (is_falling)
+        {
+            float previous_y_velocity = current_movement.y;
+            float new_y_velocity = current_movement.y + (initial_jump_gravities[jump_combo_step]
+                                                         * fall_multiplier * Time.deltaTime);
+            current_movement.y = Mathf.Max((previous_y_velocity + new_y_velocity) * 0.5f, -20.0f);
+        }
+
+        else
+        {
+            float previous_y_velocity = current_movement.y;
+            float new_y_velocity = current_movement.y + (initial_jump_gravities[jump_combo_step] * Time.deltaTime);
+            current_movement.y = Mathf.Max((previous_y_velocity + new_y_velocity) * 0.5f, -20.0f);
+        }
+    }
+
+    void HandleJumping()
+    {
+        if (!is_jumping && character_controller.isGrounded && is_jump_pressed)
+        {
+            if (jump_combo_step < 3 && active_jump_reset_routine != null)
+            {
+                StopCoroutine(active_jump_reset_routine);
+            }
+            
+            is_jumping = true;
+            jumps_remaining -= 1;
+            jump_combo_step += 1;
+            animator.SetInteger(jump_count_hash, jump_combo_step);
+            current_movement.y = initial_jump_velocities[jump_combo_step] * 0.5f;
+
+            animator.SetBool(jumping_anim_hash, true);
+            in_jump_animation = true;
+        }
+        
+        else if (is_jumping && character_controller.isGrounded && !is_jump_pressed)
+        {
+            is_jumping = false;
+        }
+    }
+
+    IEnumerator ResetJumpCombo()
+    {
+        yield return new WaitForSeconds(jump_combo_window);
+        jump_combo_step = 0;
     }
 }
