@@ -62,8 +62,9 @@ public class SlimeAI : MonoBehaviour
         if (player_in_sight_range && player_in_attack_range)
         {
             AttackPlayer();
-            if (PlayerController.is_attacking)
+            if (PlayerController1.is_attacking)
             {
+                //player.anim.SetTrigger("IsAttacking");
                 StartCoroutine(PlayerAttackInterval());
             }
         }        
@@ -154,7 +155,7 @@ public class SlimeAI : MonoBehaviour
 
     IEnumerator PlayerAttackInterval()
     {
-        PlayerController.is_attacking = false;
+        PlayerController1.is_attacking = false;
         yield return new WaitForSeconds(0.5f);
         slime.GetComponent<Rigidbody>().AddForce(new Vector3((transform.position.x - player_object.transform.position.x), 2.0f, 
             (transform.position.z - player_object.transform.position.z)).normalized, ForceMode.Impulse);

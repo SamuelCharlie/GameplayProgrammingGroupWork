@@ -76,9 +76,6 @@ public class PlayerController1 : MonoBehaviour
 
         player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
         player_controls.Player.Jump.canceled += ctx => is_jump_pressed = ctx.ReadValueAsButton();
-        
-        player_controls.Player.Interact.started += DoInteract;
-        player_controls.Player.Attack.started += DoAttack;
 
         character_controller = GetComponent<CharacterController>();
         animator_controller = GetComponent<AnimatorController>();
@@ -119,11 +116,17 @@ public class PlayerController1 : MonoBehaviour
     private void OnEnable()
     {
         player_controls.Player.Enable();
+
+        player_controls.Player.Interact.started += DoInteract;
+        player_controls.Player.Attack.started += DoAttack;
     }
 
     private void OnDisable()
     {
         player_controls.Player.Disable();
+
+        player_controls.Player.Interact.started -= DoInteract;
+        player_controls.Player.Attack.started -= DoAttack;
     }
 
     private void Update()
@@ -254,7 +257,11 @@ public class PlayerController1 : MonoBehaviour
         if (!is_interacting && in_interact_trigger)
         {
             is_interacting = true;
-        }    
+        }
+        else
+        {
+            is_interacting = false;
+        }
     }
 
     private void DoAttack(InputAction.CallbackContext obj)
