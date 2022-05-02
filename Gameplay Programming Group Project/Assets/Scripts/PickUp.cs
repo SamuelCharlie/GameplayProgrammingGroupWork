@@ -5,6 +5,7 @@ using UnityEngine;
 public class PickUp : MonoBehaviour
 {
     float rotate_speed = 1.0f;
+    public static bool got_keycard;
 
     void Update()
     {
@@ -12,6 +13,7 @@ public class PickUp : MonoBehaviour
     }
     void OnTriggerEnter(Collider other)
     {
+        got_keycard = true;
         Destroy(gameObject);
     }
 }
