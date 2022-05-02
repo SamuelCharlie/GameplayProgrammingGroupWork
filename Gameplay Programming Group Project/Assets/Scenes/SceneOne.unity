@@ -1750,6 +1750,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 914880f37ed76b94ab29219396e9ded7, type: 2}
+    - target: {fileID: 9500000, guid: e57e9b8cd5e115f4f8d7736473e5c7fd, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e57e9b8cd5e115f4f8d7736473e5c7fd, type: 3}
 --- !u!1 &76780416 stripped
@@ -1764,7 +1768,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 76780416}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b98afaba89a836e409ba1092ea52166e, type: 3}
   m_Name: 
@@ -2920,7 +2924,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6732bc925685b3c4fb86d6375431697e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  walk_speed: 0
+  sprint_speed: 0
   rotation_speed: 0
+  min_vertical_angle: 0
+  max_vertical_angle: 0
   can_double_jump: 0
   jumps_remaining: 0
   grounded_gravity: 0
@@ -3263,7 +3271,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6732bc925685b3c4fb86d6375431697e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  walk_speed: 5
+  sprint_speed: 0
   rotation_speed: 1
+  min_vertical_angle: -20
+  max_vertical_angle: 30
   can_double_jump: 0
   jumps_remaining: 0
   grounded_gravity: -1
@@ -3271,7 +3283,7 @@ MonoBehaviour:
   max_jump_height: 5
   max_jump_duration: 1
   jump_combo_window: 0.5
-  air_movement_modifier: 3
+  air_movement_modifier: 1
 --- !u!4 &934809693 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4725293624299974, guid: b8fc8c3d0e0ff9b4089c4e346ac42ecc, type: 3}
@@ -3328,7 +3340,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 80
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -3354,7 +3366,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.9, z: -2}
+  m_LocalPosition: {x: 0, y: 2.6, z: -2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 76812256}

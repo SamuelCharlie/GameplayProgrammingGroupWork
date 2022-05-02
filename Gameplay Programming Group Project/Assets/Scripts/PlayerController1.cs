@@ -12,18 +12,34 @@ public class PlayerController1 : MonoBehaviour
     private CharacterController character_controller;
     private AnimatorController animator_controller;
     private Animator animator;
+    private Camera player_cam;
     private int walking_anim_hash;
     private int running_anim_hash;
     private int jumping_anim_hash;
     private int jump_count_hash;
 
+    [Header("Gameplay")]
+    public static bool in_interact_trigger;
+    public static bool is_interacting;
+
+    public static bool is_attacking;
+    
     [Header("Movement")]
     private Vector2 move_input;
     private Vector3 current_movement;
     private bool is_movement_pressed;
     private bool is_sprinting;
+
+    public float walk_speed;
+    public float sprint_speed;
+    
+    [Header("Camera")]
+    private Vector3 cam_rotation;
+    private Vector2 rotation_vector;
     
     public float rotation_speed;
+    public float min_vertical_angle;
+    public float max_vertical_angle;
     
     [Header("Jumping")]
     private bool is_jump_pressed;
@@ -51,21 +67,23 @@ public class PlayerController1 : MonoBehaviour
         player_controls.Player.Move.performed += ctx => HandleInput(ctx);
         player_controls.Player.Move.started += ctx => HandleInput(ctx);
         player_controls.Player.Move.canceled += ctx => HandleInput(ctx);
-            
-        /*
+        
         player_controls.Player.Look.performed += ctx => rotation_vector = ctx.ReadValue<Vector2>();
         player_controls.Player.Look.canceled += ctx => rotation_vector = Vector2.zero;
-        */
         
-        player_controls.Player.Sprint.performed += ctx => is_sprinting = ctx.ReadValueAsButton();
-        player_controls.Player.Sprint.canceled += ctx => is_sprinting = ctx.ReadValueAsButton();
-        
+        player_controls.Player.Sprint.performed += ctx => HandleSprint(ctx);
+        player_controls.Player.Sprint.canceled += ctx => HandleSprint(ctx);
+
         player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
         player_controls.Player.Jump.canceled += ctx => is_jump_pressed = ctx.ReadValueAsButton();
+        
+        player_controls.Player.Interact.started += DoInteract;
+        player_controls.Player.Attack.started += DoAttack;
 
         character_controller = GetComponent<CharacterController>();
         animator_controller = GetComponent<AnimatorController>();
         animator = GetComponent<Animator>();
+        player_cam = Camera.main;
 
         walking_anim_hash = Animator.StringToHash("isWalking");
         running_anim_hash = Animator.StringToHash("isRunning");
@@ -77,6 +95,9 @@ public class PlayerController1 : MonoBehaviour
 
     private void InitGameplayValues()
     {
+        cam_rotation = new Vector3(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+        sprint_speed = walk_speed * 1.5f;
+        
         float timeToApex = max_jump_duration / 2;
         gravity = (-2 * max_jump_height) / Mathf.Pow(timeToApex, 2);
         initial_jump_velocity = (2 * max_jump_height) / timeToApex;
@@ -107,7 +128,7 @@ public class PlayerController1 : MonoBehaviour
 
     private void Update()
     {
-        //HandleRotation();
+        HandleCameraRotation();
         HandleAnimation();
         character_controller.Move(current_movement * Time.deltaTime);
         HandleGravity();
@@ -117,14 +138,27 @@ public class PlayerController1 : MonoBehaviour
     private void HandleInput(InputAction.CallbackContext ctx)
     {
         move_input = ctx.ReadValue<Vector2>();
-        current_movement.x = move_input.x;
-        current_movement.z = move_input.y;
+        Vector3 rotated_movement = transform.right * move_input.x + transform.forward * move_input.y;
+        rotated_movement.Normalize();
+        
+        rotated_movement *= is_sprinting ? sprint_speed : walk_speed;
+        current_movement.x = rotated_movement.x;
+        current_movement.z = rotated_movement.z;
+        
         is_movement_pressed = move_input.x != 0 || move_input.y != 0;
 
         if (!character_controller.isGrounded)
         {
-            current_movement.x *= is_sprinting ? air_movement_modifier * 1.5f : air_movement_modifier;
-            current_movement.z *= is_sprinting ? air_movement_modifier * 1.5f : air_movement_modifier;
+            current_movement.x *= air_movement_modifier;
+            current_movement.z *= air_movement_modifier;
+        }
+    }
+
+    private void HandleSprint(InputAction.CallbackContext ctx)
+    {
+        if (character_controller.isGrounded)
+        {
+            is_sprinting = ctx.ReadValueAsButton();
         }
     }
 
@@ -134,19 +168,14 @@ public class PlayerController1 : MonoBehaviour
             is_sprinting, character_controller.isGrounded);
     }
 
-    void HandleRotation()
+    void HandleCameraRotation()
     {
-        Vector3 target_position;
-        target_position.x = current_movement.x;
-        target_position.y = 0;
-        target_position.z = current_movement.z;
+        cam_rotation = new Vector3(cam_rotation.x + rotation_vector.y * rotation_speed,
+            cam_rotation.y + rotation_vector.x * rotation_speed, cam_rotation.z);
+        cam_rotation.x = Mathf.Clamp(cam_rotation.x, min_vertical_angle, max_vertical_angle);
         
-        Quaternion current_rotation = transform.rotation;
-        if (is_movement_pressed)
-        {
-            Quaternion target_rotation = Quaternion.LookRotation(target_position);
-            transform.rotation = Quaternion.Slerp(current_rotation, target_rotation, rotation_speed * Time.deltaTime);
-        }
+        player_cam.transform.eulerAngles = cam_rotation;
+        transform.eulerAngles = new Vector3(transform.rotation.x, cam_rotation.y, transform.rotation.z);
     }
 
     void HandleGravity()
@@ -218,5 +247,18 @@ public class PlayerController1 : MonoBehaviour
     {
         yield return new WaitForSeconds(jump_combo_window);
         jump_combo_step = 0;
+    }
+    
+    private void DoInteract(InputAction.CallbackContext obj)
+    {
+        if (!is_interacting && in_interact_trigger)
+        {
+            is_interacting = true;
+        }    
+    }
+
+    private void DoAttack(InputAction.CallbackContext obj)
+    {
+        is_attacking = true;
     }
 }
