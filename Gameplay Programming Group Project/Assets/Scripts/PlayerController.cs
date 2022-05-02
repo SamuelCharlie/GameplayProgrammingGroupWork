@@ -33,6 +33,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float gravity;
     [SerializeField] private float ground_gravity;
 
+    public static bool in_interact_trigger;
+    public static bool is_interacting;
+
     private void Awake()
     {
         player_controls = new PlayerControls();
@@ -56,11 +59,13 @@ public class PlayerController : MonoBehaviour
     private void OnEnable()
     {
         player_controls.Player.Enable();
+        player_controls.Player.Interact.started += DoInteract;
     }
 
     private void OnDisable()
     {
         player_controls.Player.Disable();
+        player_controls.Player.Interact.started -= DoInteract;
     }
 
     private void Start()
@@ -143,5 +148,13 @@ public class PlayerController : MonoBehaviour
         {
             is_jumping = false;
         }
+    }
+
+    private void DoInteract(InputAction.CallbackContext obj)
+    {
+        if (!is_interacting && in_interact_trigger)
+        {
+            is_interacting = true;
+        }    
     }
 }
