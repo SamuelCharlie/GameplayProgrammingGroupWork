@@ -44,9 +44,9 @@ public class DoubleJumpPowerup : MonoBehaviour
         _itemCollider.enabled = false;
 
         
-        player.GetComponent<PlayerManager>().HandleDoubleJumpEffect(true);
+        player.GetComponent<PlayerController1>().can_double_jump = true;
         yield return new WaitForSeconds(powerupDuration);
-        player.GetComponent<PlayerManager>().HandleDoubleJumpEffect(false);
+        player.GetComponent<PlayerController1>().can_double_jump = false;
     }
     
     IEnumerator Respawn()

@@ -63,7 +63,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c4fef7cd98a71f04cad0e41a6bee21a2, type: 2}
+  - {fileID: 2100000, guid: 42ed9add9d58cba449ec9b7e182305cb, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -130,5 +130,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pickupEffect: {fileID: 3885870400000120384, guid: 01cda2115b417194993433cfc0179d2a, type: 3}
-  powerupDuration: 20
-  respawnDelay: 6
+  powerupDuration: 10
+  respawnDelay: 10

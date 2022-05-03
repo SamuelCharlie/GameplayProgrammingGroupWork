@@ -17,16 +17,23 @@ public class PlayerController1 : MonoBehaviour
     private int running_anim_hash;
     private int jumping_anim_hash;
     private int jump_count_hash;
+    private int dying_anim_hash;
 
     [Header("Gameplay")]
+    private GameObject respawn_point;
+    private bool is_dying;
+    private Coroutine active_dying_routine = null;
+    
     public static bool in_interact_trigger;
     public static bool is_interacting;
-
     public static bool is_attacking;
+
+    public int max_hp;
+    public int hp;
     
     [Header("Movement")]
     private Vector2 move_input;
-    private Vector3 current_movement;
+    public Vector3 current_movement;
     private bool is_movement_pressed;
     private bool is_sprinting;
 
@@ -77,6 +84,8 @@ public class PlayerController1 : MonoBehaviour
         player_controls.Player.Jump.started += ctx => is_jump_pressed = ctx.ReadValueAsButton();
         player_controls.Player.Jump.canceled += ctx => is_jump_pressed = ctx.ReadValueAsButton();
 
+        respawn_point = GameObject.FindGameObjectWithTag("Respawn");
+        
         character_controller = GetComponent<CharacterController>();
         animator_controller = GetComponent<AnimatorController>();
         animator = GetComponent<Animator>();
@@ -86,6 +95,9 @@ public class PlayerController1 : MonoBehaviour
         running_anim_hash = Animator.StringToHash("isRunning");
         jumping_anim_hash = Animator.StringToHash("isJumping");
         jump_count_hash = Animator.StringToHash("jumpCount");
+        dying_anim_hash = Animator.StringToHash("isDying");
+        
+        Cursor.lockState = CursorLockMode.Locked;
         
         InitGameplayValues();
     }
@@ -94,6 +106,7 @@ public class PlayerController1 : MonoBehaviour
     {
         cam_rotation = new Vector3(transform.rotation.x, transform.rotation.y, transform.rotation.z);
         sprint_speed = walk_speed * 1.5f;
+        hp = max_hp;
         
         float timeToApex = max_jump_duration / 2;
         gravity = (-2 * max_jump_height) / Mathf.Pow(timeToApex, 2);
@@ -136,6 +149,11 @@ public class PlayerController1 : MonoBehaviour
         character_controller.Move(current_movement * Time.deltaTime);
         HandleGravity();
         HandleJumping();
+
+        if (hp <= 0 && !is_dying && active_dying_routine == null)
+        {
+            active_dying_routine = StartCoroutine(PlayerDeath());
+        }
     }
 
     private void HandleInput(InputAction.CallbackContext ctx)
@@ -185,6 +203,18 @@ public class PlayerController1 : MonoBehaviour
     {
         bool is_falling = current_movement.y <= 0.0f || !is_jump_pressed;
         float fall_multiplier = 2.0f;
+
+        if (can_double_jump && jumps_remaining == 1)
+        {
+            if (in_jump_animation)
+            {
+                if (jump_combo_step == 3)
+                {
+                    jump_combo_step = 0;
+                    animator.SetInteger(jump_count_hash, jump_combo_step);
+                }
+            }
+        }
         
         if (character_controller.isGrounded)
         {
@@ -223,7 +253,8 @@ public class PlayerController1 : MonoBehaviour
 
     void HandleJumping()
     {
-        if (!is_jumping && character_controller.isGrounded && is_jump_pressed)
+        if ((!is_jumping && character_controller.isGrounded && is_jump_pressed)
+            || (!is_jumping && can_double_jump && jumps_remaining > 0 && is_jump_pressed))
         {
             if (jump_combo_step < 3 && active_jump_reset_routine != null)
             {
@@ -240,7 +271,8 @@ public class PlayerController1 : MonoBehaviour
             in_jump_animation = true;
         }
         
-        else if (is_jumping && character_controller.isGrounded && !is_jump_pressed)
+        else if ((is_jumping && character_controller.isGrounded && !is_jump_pressed)
+                 || (is_jumping && can_double_jump && jumps_remaining == 1 && !is_jump_pressed && current_movement.y < 0))
         {
             is_jumping = false;
         }
@@ -267,5 +299,32 @@ public class PlayerController1 : MonoBehaviour
     private void DoAttack(InputAction.CallbackContext obj)
     {
         is_attacking = true;
+    }
+
+    public void DamageHP(int damage)
+    {
+        hp -= damage;
+        hp = Mathf.Clamp(hp, 0, max_hp);
+    }
+
+    private IEnumerator PlayerDeath()
+    {
+        is_dying = true;
+        animator.SetBool(dying_anim_hash, true);
+        player_controls.Disable();
+        character_controller.enabled = false;
+        yield return new WaitForSeconds(3f);
+
+        transform.position = respawn_point.transform.position;
+        transform.rotation = respawn_point.transform.rotation;
+        hp = max_hp;
+        
+        is_dying = false;
+        animator.SetBool(dying_anim_hash, false);
+        player_controls.Enable();
+        character_controller.enabled = true;
+
+        active_dying_routine = null;
+        StopCoroutine(PlayerDeath());
     }
 }

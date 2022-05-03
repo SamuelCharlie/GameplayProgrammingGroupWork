@@ -4,15 +4,12 @@ using UnityEngine;
 
 public class Killvolume : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    private void OnTriggerEnter(Collider other)
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        if (other.gameObject.CompareTag("Player"))
+        {
+            other.gameObject.GetComponent<PlayerController1>().DamageHP(9999);
+            Debug.Log("Player entered killvolume");
+        }
     }
 }

@@ -44,9 +44,9 @@ public class SpeedPowerup : MonoBehaviour
         _itemMeshRenderer.enabled = false;
         _itemCollider.enabled = false;
 
-        player.GetComponent<PlayerManager>().HandleSpeedBoost(true, speedBonus);
+        //player.GetComponent<PlayerManager>().HandleSpeedBoost(true, speedBonus);
         yield return new WaitForSeconds(powerupDuration);
-        player.GetComponent<PlayerManager>().HandleSpeedBoost(false, 1f);
+        //player.GetComponent<PlayerManager>().HandleSpeedBoost(false, 1f);
     }
 
     IEnumerator Respawn()

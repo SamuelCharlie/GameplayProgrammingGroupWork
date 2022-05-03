@@ -129,7 +129,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 421655a43508cc44dafbd5409300e5d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pickupEffect: {fileID: 0}
+  pickupEffect: {fileID: 3885870400000120384, guid: 99645492d576bd741bfb8ddb6a168fb6, type: 3}
   canRespawn: 0
   respawnDelay: 20
   healthRestored: 10
