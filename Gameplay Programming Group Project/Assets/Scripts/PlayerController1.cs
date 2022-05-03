@@ -21,6 +21,7 @@ public class PlayerController1 : MonoBehaviour
     [Header("Gameplay")]
     public static bool in_interact_trigger;
     public static bool is_interacting;
+    public static bool in_obj_menu;
 
     public static bool is_attacking;
     
@@ -119,6 +120,7 @@ public class PlayerController1 : MonoBehaviour
 
         player_controls.Player.Interact.started += DoInteract;
         player_controls.Player.Attack.started += DoAttack;
+        player_controls.Player.OpenMenu.started += OpenMenu;
     }
 
     private void OnDisable()
@@ -127,7 +129,9 @@ public class PlayerController1 : MonoBehaviour
 
         player_controls.Player.Interact.started -= DoInteract;
         player_controls.Player.Attack.started -= DoAttack;
+        player_controls.Player.OpenMenu.started -= OpenMenu;
     }
+
 
     private void Update()
     {
@@ -267,5 +271,17 @@ public class PlayerController1 : MonoBehaviour
     private void DoAttack(InputAction.CallbackContext obj)
     {
         is_attacking = true;
+    }
+
+    private void OpenMenu(InputAction.CallbackContext obj)
+    {
+        if (!in_obj_menu)
+        {
+            in_obj_menu = true;
+        }
+        else if (in_obj_menu)
+        {
+            in_obj_menu = false;
+        }
     }
 }
