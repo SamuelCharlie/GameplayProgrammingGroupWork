@@ -9,7 +9,7 @@ public class UnlockDoor : MonoBehaviour
     {
         PlayerController1.in_interact_trigger = true;
 
-        if (PickUp.got_keycard && PlayerController1.is_interacting)
+        if (PickUp.got_keycard_one && PickUpKeyCard.got_keycard_two && PlayerController1.is_interacting)
         {
             locked_door.SetTrigger("DoorUnlock");
         }

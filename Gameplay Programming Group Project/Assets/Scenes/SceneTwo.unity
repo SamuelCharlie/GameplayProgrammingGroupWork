@@ -633,7 +633,7 @@ Light:
   m_Type: 2
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1
+  m_Intensity: 5
   m_Range: 20
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -2241,6 +2241,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6732bc925685b3c4fb86d6375431697e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  max_hp: 100
+  hp: 0
+  current_movement: {x: 0, y: 0, z: 0}
   walk_speed: 5
   sprint_speed: 0
   rotation_speed: 1

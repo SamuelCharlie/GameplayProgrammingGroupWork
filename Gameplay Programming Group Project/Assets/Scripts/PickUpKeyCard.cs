@@ -2,10 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PickUp : MonoBehaviour
+public class PickUpKeyCard : MonoBehaviour
 {
     float rotate_speed = 1.0f;
-    public static bool got_keycard_one;
+    public static bool got_keycard_two;
 
     void Update()
     {
@@ -13,7 +13,7 @@ public class PickUp : MonoBehaviour
     }
     void OnTriggerEnter(Collider other)
     {
-        got_keycard_one = true;
+        got_keycard_two = true;
         Destroy(gameObject);
     }
 }

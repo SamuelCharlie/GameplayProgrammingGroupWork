@@ -15,6 +15,8 @@ public class PlayerController1 : MonoBehaviour
     private Camera player_cam;
     private int walking_anim_hash;
     private int running_anim_hash;
+    private int attacking_anim_hash;
+    private int attack_count_hash;
     private int jumping_anim_hash;
     private int jump_count_hash;
     private int dying_anim_hash;
@@ -23,7 +25,9 @@ public class PlayerController1 : MonoBehaviour
     private GameObject respawn_point;
     private bool is_dying;
     private Coroutine active_dying_routine = null;
-    
+    private int attack_combo_count;
+    private Coroutine active_attacking_routine = null;
+
     public static bool in_interact_trigger;
     public static bool is_interacting;
     public static bool is_attacking;
@@ -97,6 +101,8 @@ public class PlayerController1 : MonoBehaviour
         jumping_anim_hash = Animator.StringToHash("isJumping");
         jump_count_hash = Animator.StringToHash("jumpCount");
         dying_anim_hash = Animator.StringToHash("isDying");
+        attacking_anim_hash = Animator.StringToHash("isAttacking");
+        attack_count_hash = Animator.StringToHash("attackCount");
         
         Cursor.lockState = CursorLockMode.Locked;
         
@@ -150,6 +156,14 @@ public class PlayerController1 : MonoBehaviour
     {
         HandleCameraRotation();
         HandleAnimation();
+
+        /*
+        if (!is_attacking && attack_combo_count != 1)
+        {
+            active_attacking_routine = StartCoroutine(ResetAttackCombo());
+        }
+        */
+
         character_controller.Move(current_movement * Time.deltaTime);
         HandleGravity();
         HandleJumping();
@@ -287,7 +301,13 @@ public class PlayerController1 : MonoBehaviour
         yield return new WaitForSeconds(jump_combo_window);
         jump_combo_step = 0;
     }
-    
+
+    IEnumerator ResetAttackCombo()
+    {
+        yield return new WaitForSeconds(jump_combo_window);
+        attack_combo_count = 1;
+    }
+
     private void DoInteract(InputAction.CallbackContext obj)
     {
         if (!is_interacting && in_interact_trigger)
@@ -302,7 +322,23 @@ public class PlayerController1 : MonoBehaviour
 
     private void DoAttack(InputAction.CallbackContext obj)
     {
-        is_attacking = true;
+        if(!is_attacking)
+        {
+            /*
+            if (attack_combo_count < 3 && active_attacking_routine != null)
+            {
+                StopCoroutine(active_attacking_routine);
+            }
+            */
+
+            is_attacking = true;
+            animator.SetBool(attacking_anim_hash, true);
+
+            /*
+            animator.SetInteger(attack_count_hash, attack_combo_count);
+            attack_combo_count += 1;
+            */
+        }
     }
 
     public void DamageHP(int damage)
