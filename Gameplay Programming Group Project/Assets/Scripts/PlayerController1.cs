@@ -27,6 +27,7 @@ public class PlayerController1 : MonoBehaviour
     public static bool in_interact_trigger;
     public static bool is_interacting;
     public static bool is_attacking;
+    public static bool in_obj_menu;
 
     public int max_hp;
     public int hp;
@@ -132,6 +133,7 @@ public class PlayerController1 : MonoBehaviour
 
         player_controls.Player.Interact.started += DoInteract;
         player_controls.Player.Attack.started += DoAttack;
+        player_controls.Player.OpenMenu.started += OpenMenu;
     }
 
     private void OnDisable()
@@ -140,7 +142,9 @@ public class PlayerController1 : MonoBehaviour
 
         player_controls.Player.Interact.started -= DoInteract;
         player_controls.Player.Attack.started -= DoAttack;
+        player_controls.Player.OpenMenu.started -= OpenMenu;
     }
+
 
     private void Update()
     {
@@ -326,5 +330,17 @@ public class PlayerController1 : MonoBehaviour
 
         active_dying_routine = null;
         StopCoroutine(PlayerDeath());
+    }
+
+    private void OpenMenu(InputAction.CallbackContext obj)
+    {
+        if (!in_obj_menu)
+        {
+            in_obj_menu = true;
+        }
+        else if (in_obj_menu)
+        {
+            in_obj_menu = false;
+        }
     }
 }
